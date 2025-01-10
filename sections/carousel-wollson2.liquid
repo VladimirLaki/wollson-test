@@ -1,0 +1,244 @@
+{% schema %}
+{
+  "name": "Best Selling Slider2",
+  "settings": [
+    {
+      "id": "title",
+      "type": "text",
+      "label": "Section Title",
+      "default": "Best Sellers"
+    },
+    {
+      "id": "slides_per_view",
+      "type": "number",
+      "label": "Number of Slides to Display",
+      "default": 3
+    },
+    {
+      "id": "collection",
+      "type": "collection",
+      "label": "Select Collection"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Best Selling Slider"
+    }
+  ]
+}
+{% endschema %}
+
+<section class="best-selling-slider">
+  <h2>{{ section.settings.title }}</h2>
+  <div class="swiper-container">
+    <div class="swiper-wrapper">
+      {% assign collection = collections[section.settings.collection] %}
+      {% if collection and collection.products.size > 0 %}
+        {% for product in collection.products limit: section.settings.max_products %}
+          <div class="swiper-slide">
+            <div class="product-card">
+              <img class="product-image" src="{{ product.featured_image | img_url: '500x500' }}" alt="{{ product.title }}" loading="lazy">
+              <h3>{{ product.title }}</h3>
+              <p class="product-price">${{ product.price | divided_by: 100 }}</p>
+
+              <div class="product-options">
+                {% assign size_values = "" %}
+                {% assign color_values = "" %}
+
+                {% for variant in product.variants %}
+                  {% assign size_value = variant.options[0] %}
+                  {% assign color_value = variant.options[1] %}
+                  {% assign size_available = variant.available %}
+                  {% assign color_available = variant.available %}
+
+                  <!-- Add unique size values -->
+                  {% unless size_values contains size_value %}
+                    {% assign size_values = size_values | append: size_value | append: ',' %}
+                  {% endunless %}
+
+                  <!-- Add unique color values -->
+                  {% unless color_values contains color_value %}
+                    {% assign color_values = color_values | append: color_value | append: ',' %}
+                  {% endunless %}
+                {% endfor %}
+
+                <!-- Display Size options -->
+                {% if size_values != "" %}
+                  <div class="option-group">
+                    <span class="option-label">Size</span>
+                    <div class="option-values">
+                      {% assign size_values_array = size_values | split: ',' %}
+                      {% for size in size_values_array %}
+                        {% if size != "" %}
+                          <button class="variant-option size-option" data-option-name="Size" data-option-value="{{ size }}">
+                            {{ size }}
+                          </button>
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+
+                <!-- Display Color options -->
+                {% if color_values != "" %}
+                  <div class="option-group">
+                    <span class="option-label">Color</span>
+                    <div class="option-values">
+                      {% assign color_values_array = color_values | split: ',' %}
+                      {% for color in color_values_array %}
+                        {% if color != "" %}
+                          <button class="variant-option color-option" style="background-color: {{ color | downcase }};" data-option-name="Color" data-option-value="{{ color }}">
+                            <span class="color-indicator"></span>
+                          </button>
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+
+              <button class="add-to-cart" data-product-id="{{ product.id }}" disabled>Add to Cart</button>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>No products found in the selected collection.</p>
+      {% endif %}
+    </div>
+    <div class="swiper-button-next"></div>
+    <div class="swiper-button-prev"></div>
+    <div class="swiper-pagination"></div>
+  </div>
+</section>
+
+<style>
+/* Your existing CSS styles */
+.best-selling-slider { padding: 20px; background: #f9f9f9; }
+.best-selling-slider h2 { text-align: center; margin-bottom: 20px; }
+.swiper-container { width: 100%; }
+.swiper-slide { display: flex; justify-content: center; }
+.product-card { background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 5px; text-align: center; max-width: 300px; }
+.product-image { max-width: 100%; border-radius: 5px; }
+.product-price { font-weight: bold; margin: 10px 0; }
+.product-options { margin: 10px 0; }
+.option-group { margin-bottom: 5px; }
+.option-label { font-weight: bold; margin-bottom: 5px; display: block; }
+.option-values { display: flex; gap: 5px; flex-wrap: wrap; }
+.variant-option { border: 1px solid #ddd; padding: 5px 10px; border-radius: 3px; cursor: pointer; background: #f0f0f0; }
+.variant-option:hover { background: #e0e0e0; }
+.color-option { width: 25px; height: 25px; border-radius: 50%; }
+.add-to-cart { margin-top: 10px; padding: 10px 20px; background: #007bff; color: #fff; border: none; border-radius: 3px; cursor: pointer; }
+.add-to-cart:hover { background-color: #0056b3; }
+
+.variant-option.selected {
+    background-color: #007bff;
+    color: #fff;
+}
+
+.product-card:hover .product-options {
+    border-color: #007bff;
+}
+
+.color-option.selected {
+  border: 2px solid #007bff; /* Blue border around selected color */
+}
+
+</style>
+
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css">
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  let selectedSize = null;
+  let selectedColor = null;
+  let selectedVariantId = null;
+  
+  // Initialize the swiper slider
+  const swiper = new Swiper('.swiper-container', {
+    slidesPerView: {{ section.settings.slides_per_view }},
+    spaceBetween: 10,
+    navigation: {
+      nextEl: '.swiper-button-next',
+      prevEl: '.swiper-button-prev',
+    },
+    pagination: {
+      el: '.swiper-pagination',
+      clickable: true,
+    },
+    breakpoints: {
+      768: { slidesPerView: 2, spaceBetween: 20 },
+      1024: { slidesPerView: 3, spaceBetween: 30 },
+    },
+  });
+
+  // Track Size selection
+  document.querySelectorAll('.size-option').forEach(button => {
+    button.addEventListener('click', (event) => {
+      selectedSize = event.target.getAttribute('data-option-value');
+      console.log(`Selected Size: ${selectedSize}`);
+      updateSelectedVariant();
+    });
+  });
+
+  // Track Color selection
+  document.querySelectorAll('.color-option').forEach(button => {
+    button.addEventListener('click', (event) => {
+      selectedColor = event.target.getAttribute('data-option-value');
+      console.log(`Selected Color: ${selectedColor}`);
+      updateSelectedVariant();
+    });
+  });
+
+  // Find the correct variant based on Size and Color
+  function updateSelectedVariant() {
+    // Reset selectedVariantId
+    selectedVariantId = null;
+
+    {% for product in collection.products %}
+      {% for variant in product.variants %}
+        {% assign size_option = variant.options[0] %}
+        {% assign color_option = variant.options[1] %}
+        if (size_option == selectedSize && color_option == selectedColor) {
+          selectedVariantId = {{ variant.id }};
+          break;
+        }
+      {% endfor %}
+    {% endfor %}
+
+    if (selectedVariantId) {
+      const addToCartButton = document.querySelector('.add-to-cart');
+      addToCartButton.disabled = false; // Enable Add to Cart
+      addToCartButton.setAttribute('data-variant-id', selectedVariantId); // Set the variant ID
+      console.log(`Variant selected: ${selectedVariantId}`);
+    }
+  }
+
+  // Add the selected variant to the cart
+  document.querySelectorAll('.add-to-cart').forEach(button => {
+    button.addEventListener('click', () => {
+      const variantId = button.getAttribute('data-variant-id');
+      if (variantId) {
+        const formData = {
+          items: [{ id: variantId, quantity: 1 }]
+        };
+
+        fetch('/cart/add.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Item added to cart:', data);
+          // Optionally, update cart UI or show success message
+        })
+        .catch(error => {
+          console.error('Error adding to cart:', error);
+        });
+      }
+    });
+  });
+});
+</script>

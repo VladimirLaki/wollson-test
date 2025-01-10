@@ -1,0 +1,379 @@
+{% schema %}
+{
+  "name": "Best Selling Slider",
+  "settings": [
+    {
+      "id": "title",
+      "type": "text",
+      "label": "Section Title",
+      "default": "Best Sellers"
+    },
+    {
+      "id": "collection",
+      "type": "collection",
+      "label": "Select Collection"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Best Selling Slider"
+    }
+  ]
+}
+{% endschema %}
+
+<section class="best-selling-slider">
+  <h2>{{ section.settings.title }}</h2>
+  <div class="swiper-container" space-between="30"
+    slides-per-view="2">
+    <div class="swiper-wrapper">
+      {% assign collection = collections[section.settings.collection] %}
+      {% if collection and collection.products.size > 0 %}
+        {% for product in collection.products limit: section.settings.max_products %}
+          <div class="swiper-slide">
+            <div class="product-card" data-product-id="{{ product.id }}" data-variants='{{ product.variants | json }}'>
+              <img class="product-image" src="{{ product.featured_image | img_url: '500x500' }}" alt="{{ product.title }}" loading="lazy">
+              
+              <!-- Star Rating moze i od metafield ?-->
+              <div class="product-rating">
+                ⭐⭐⭐⭐☆ <span>4 Stars</span>
+              </div>
+              
+              <h3>{{ product.title }}</h3>
+
+              <div class="product-options">
+                <!-- Size Option Dropdown dropdown moze da dodadam nekoj style -->
+                <div class="option-group">
+                  <label for="size-dropdown-{{ product.id }}" class="option-label">Size: </label>
+                  <select id="size-dropdown-{{ product.id }}" class="size-dropdown">
+                    <option value="" disabled selected>Select Size</option>
+                    {% assign unique_sizes = product.variants | map: 'option1' | uniq %}
+                    {% for size in unique_sizes %}
+                      <option value="{{ size }}">{{ size }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+                <!-- Color Options treba da pokazuva krug so bojata -->
+                <div class="option-group">
+                  <span class="option-label">Color: </span>
+                  <div class="option-values">
+                    {% assign unique_colors = product.variants | map: 'option2' | uniq %}
+                    {% for color in unique_colors %}
+                      <button class="variant-option color-option" data-option-name="Color" data-option-value="{{ color }}" style="background-color: {{ color | downcase }};">
+                        <span class="color-indicator"></span>
+                      </button>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+
+              <button class="add-to-cart" disabled>Add to Cart</button>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p>No products found in the selected collection.</p>
+      {% endif %}
+    </div>
+    <div class="swiper-button-next"></div>
+    <div class="swiper-button-prev"></div>
+    <div class="swiper-pagination"></div>
+  </div>
+</section>
+
+<!-- Cart Popup -->
+<div id="cart-popup" class="cart-popup">
+  <div class="popup-content">
+    <!-- Thumbnail and Product Info -->
+    <img id="popup-thumbnail" class="popup-thumbnail" src="" alt="Product Thumbnail">
+    <div class="popup-info">
+      
+      <div class="popup-details">
+       
+        <h4 id="popup-product-title" class="popup-product-title"></h4>
+        <p id="popup-size" class="popup-size"></p>
+        <div id="popup-color-options" class="popup-color-options"></div>
+      </div>
+    </div>
+    <div class="popup-viewcart">
+       <p id="added-message" class="added-message">ADDED!</p>
+    <a href="/cart" class="view-cart-button">View Cart</a>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css">
+<style>
+
+.best-selling-slider { padding: 20px; background: #f9f9f9; }
+.best-selling-slider h2 { text-align: center; margin-bottom: 20px; }
+.swiper-container { width: 100%; }
+.swiper-slide { display: flex; justify-content: center; }
+.product-card { background: #fff; border: 1px solid #ddd; padding: 5px; border-radius: 5px; text-align: center; max-width: 300px; }
+.product-image { max-width: 100%; border-radius: 5px; }
+.product-price { font-weight: bold; margin: 10px 0; }
+.product-options { margin: 10px 0; }
+.option-group { margin-bottom: 10px; display:flex; }
+.option-label { font-weight: bold; margin-right: 5px; display: block; }
+.option-values { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; align-items: center;}
+.color-option { width: 25px; height: 25px; border-radius: 50%; padding:0px; border: 1px solid #ddd; cursor: pointer; display: inline-block; }
+.color-option:hover { box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); transform: scale(1.1); }
+.color-option.selected { border: 2px solid #007bff; box-shadow: 0 0 8px rgba(0, 123, 255, 0.5); transform: scale(1.2); }
+.add-to-cart { margin-top: 10px; padding: 12px 20px; background: #d12f24; color: #fff; border: none; border-radius: 25px; cursor: pointer; font-size: 16px; font-weight: bold; width:85%; }
+.add-to-cart:hover { background-color: #80221c; }
+  .product-card h3{text-align:left;}
+.size-dropdown {
+    width: 100%;
+}
+  p#added-message {
+    display: block;
+    margin: 0px 0px 15px 15px;
+    color: green;
+}
+  .popup-thumbnail {
+    width: 75px;
+    height: 75px;
+    object-fit: cover;
+    margin-right: 10px;
+}
+
+  
+
+/* Styles for the Cart Popup */
+.cart-popup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  display: none;
+  z-index: 9999;
+  width: 350px;
+}
+p#popup-size {
+    margin: 0px;
+}
+  h4#popup-product-title {
+    font-size: 12px;
+    margin: 0px;
+}
+.popup-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.popup-thumbnail {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+
+.popup-options {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.view-cart-button {
+  background-color: #007bff;
+  color: white;
+  padding: 5px 10px;
+  text-decoration: none;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.view-cart-button:hover {
+  background-color: #0056b3;
+}
+
+  @media only screen and (max-width: 600px) {
+.color-option {
+    width: 15px;
+    height: 15px;
+}
+    .add-to-cart {
+      width:70%;
+    }
+    .cart-popup {
+  position: fixed;
+  top:0px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  display: none;
+  z-index: 9999;
+  width: 100%;
+}
+    .popup-content {
+        margin-left: 30px;
+    }
+}
+</style>
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize the Swiper slider
+const swiper = new Swiper('.swiper-container', {
+  slidesPerView: 2, // Default for all screen sizes
+  spaceBetween: 10,
+  navigation: {
+    nextEl: '.swiper-button-next',
+    prevEl: '.swiper-button-prev',
+  },
+  pagination: {
+    el: '.swiper-pagination',
+    clickable: true,
+    type: 'bullets',
+  },
+  breakpoints: {
+    320: { 
+      slidesPerView: 2,
+      spaceBetween: 10,
+    },
+    768: { 
+      slidesPerView: 4,
+      spaceBetween: 20,
+    },
+  },
+});
+
+// Handle Product Variants
+// Handle Product Variants
+document.querySelectorAll('.product-card').forEach((productCard) => {
+  const addToCartButton = productCard.querySelector('.add-to-cart');
+  const variants = JSON.parse(productCard.getAttribute('data-variants'));
+  let selectedSize = null;
+  let selectedColor = null;
+  let productImage = productCard.querySelector('.product-image');
+  let productPrice = productCard.querySelector('.product-price');
+
+  // Size Dropdown Change
+  const sizeDropdown = productCard.querySelector('.size-dropdown');
+  sizeDropdown.addEventListener('change', (event) => {
+    selectedSize = event.target.value;
+    updateSelectedVariant();
+  });
+
+  // Color Option Buttons
+  productCard.querySelectorAll('.color-option').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      selectedColor = event.target.getAttribute('data-option-value');
+      productCard.querySelectorAll('.color-option').forEach((btn) =>
+        btn.classList.remove('selected')
+      );
+      button.classList.add('selected');
+      updateSelectedVariant();
+    });
+  });
+
+  // Update Add to Cart Button, Image, and Price
+productCard.querySelectorAll('.color-option').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      selectedColor = event.target.getAttribute('data-option-value');
+      productCard.querySelectorAll('.color-option').forEach((btn) =>
+        btn.classList.remove('selected')
+      );
+      button.classList.add('selected');
+      updateSelectedVariant();
+    });
+  });
+
+  // Update Add to Cart - sredi go delot so slikite na razlicni varijatni
+function updateSelectedVariant() {
+  if (selectedSize && selectedColor) {
+    const matchingVariant = variants.find(
+      (variant) => variant.option1 === selectedSize && variant.option2 === selectedColor
+    );
+
+    if (matchingVariant) {
+
+      addToCartButton.disabled = false;
+      addToCartButton.textContent = `Add - $${(matchingVariant.price / 100).toFixed(2)}`;
+      addToCartButton.dataset.variantId = matchingVariant.id;
+
+
+      if (matchingVariant.featured_image && matchingVariant.featured_image.src) {
+        productImage.src = matchingVariant.featured_image.src;
+      } else {
+        console.error('No image available for this variant');
+        productImage.src = '/path/to/placeholder-image.jpg';
+      }
+    } else {
+      console.error('No matching variant found');
+      resetAddToCartButton();
+    }
+  } else {
+    resetAddToCartButton();
+  }
+}
+
+
+
+  // Reset Add to Cart Button
+  function resetAddToCartButton() {
+    addToCartButton.disabled = true;
+    addToCartButton.textContent = 'Add to Cart';
+    delete addToCartButton.dataset.variantId;
+    productImage.src = ''; // Reset image if needed
+    if (productPrice) {
+      productPrice.textContent = ''; // Reset price if needed
+    }
+  }
+
+  // Add to Cart Functionality
+  addToCartButton.addEventListener('click', () => {
+    const variantId = addToCartButton.dataset.variantId;
+    if (variantId) {
+      fetch('/cart/add.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: [{ id: variantId, quantity: 1 }] }),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          console.log('Item added to cart:', data);
+          showCartPopup(data);
+        })
+        .catch((error) => console.error('Error adding to cart:', error));
+    }
+  });
+
+  // Show Cart Popup
+  function showCartPopup(data) {
+    const popup = document.getElementById('cart-popup');
+    const popupThumbnail = document.getElementById('popup-thumbnail');
+    const popupProductTitle = document.getElementById('popup-product-title');
+    const popupSize = document.getElementById('popup-size');
+    const popupColorOptions = document.getElementById('popup-color-options');
+    const addedMessage = document.getElementById('added-message');
+
+    // Get the selected product details
+    const addedItem = data.items[0];
+    popupThumbnail.src = addedItem.image;
+    popupProductTitle.textContent = addedItem.title;
+    popupSize.textContent = `${selectedSize}`;
+    popupColorOptions.innerHTML = `
+      <button class="color-option" style="background-color: ${selectedColor};"></button>
+    `;
+
+    // Display the "ADDED!" message and popup
+    addedMessage.style.display = 'block';
+    popup.style.display = 'flex';
+
+    setTimeout(() => {
+      popup.style.display = 'none';
+    }, 5000);
+  }
+});
+});
+</script>
+
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
