@@ -294,11 +294,9 @@ function updateSelectedVariant() {
     );
 
     if (matchingVariant) {
-
       addToCartButton.disabled = false;
       addToCartButton.textContent = `Add - $${(matchingVariant.price / 100).toFixed(2)}`;
       addToCartButton.dataset.variantId = matchingVariant.id;
-
 
       if (matchingVariant.featured_image && matchingVariant.featured_image.src) {
         productImage.src = matchingVariant.featured_image.src;
@@ -311,9 +309,18 @@ function updateSelectedVariant() {
       resetAddToCartButton();
     }
   } else {
+    // If no size or color is selected, fallback to the first available image.
     resetAddToCartButton();
+    const defaultImage = variants[0]?.featured_image?.src || productImage.dataset.defaultSrc;
+    if (defaultImage) {
+      productImage.src = defaultImage;
+    } else {
+      console.error('No default image available');
+      productImage.src = '/path/to/placeholder-image.jpg';
+    }
   }
 }
+
 
 
 
